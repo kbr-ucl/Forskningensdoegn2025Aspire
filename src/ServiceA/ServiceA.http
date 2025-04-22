@@ -1,0 +1,6 @@
+@ServiceA_HostAddress = https://localhost:7200
+
+GET {{ServiceA_HostAddress}}/hello/
+Accept: application/json
+
+###

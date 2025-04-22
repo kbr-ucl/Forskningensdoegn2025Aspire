@@ -1,0 +1,8 @@
+@Gateway_HostAddress = https://localhost:7053
+
+GET {{Gateway_HostAddress}}/ServiceA/Hello
+Accept: application/json
+
+###
+GET {{Gateway_HostAddress}}/ServiceB/Hello
+Accept: application/json
