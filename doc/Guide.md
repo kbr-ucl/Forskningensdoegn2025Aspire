@@ -363,3 +363,10 @@ Bemærk at testen er succesfuld
 ### Done
 
 Iteration 2 er afsluttet da vi har en succesfuld test - vores abstrakte servicenavne i Apigatewayen virker (hvilket var vores DoD kriterie).
+
+
+
+## Iteration 3
+
+I denne iteration skal vi have tilkoblet SQL databaser til hhv. ServiceA og ServiceB. Men dette skal ske via Aspire og SQL servere der hostes i Docker.
+
