@@ -678,6 +678,12 @@ Der er data i databasen - det virker :-)
 
 
 
+### Solution overblik
+
+Nedenstående er vis de ændringer der - på fil niveau - er er foretaget i denne iteration
+
+![image-20250423103945058](assets/image-20250423103945058.png)
+
 ### Done
 
 Iteration 3 er afsluttet da vi har en succesfuld test - Der er data i databasen som er indsat via Entity Framework.
@@ -686,4 +692,4 @@ Iteration 3 er afsluttet da vi har en succesfuld test - Der er data i databasen 
 
 ## Iteration 4
 
-I denne iteration skal vi have tilkoblet SQL databaser til hhv. ServiceA og ServiceB. Men dette skal ske via Aspire og SQL servere der hostes i Docker.
+I denne iteration skal vi have tilkoblet en Web frontend.
