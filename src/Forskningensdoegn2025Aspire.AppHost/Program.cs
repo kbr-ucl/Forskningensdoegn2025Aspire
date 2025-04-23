@@ -23,5 +23,6 @@ var gateway = builder.AddProject<Projects.Gateway>("gateway")
     .WaitFor(serviceA)
     .WaitFor(serviceB);
 
+builder.AddDockerComposePublisher();
 
 builder.Build().Run();

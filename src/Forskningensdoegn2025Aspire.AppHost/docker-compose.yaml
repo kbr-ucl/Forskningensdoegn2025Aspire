@@ -1,0 +1,75 @@
+services:
+  sql:
+    image: "mcr.microsoft.com/mssql/server:2022-latest"
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SQL_PASSWORD}"
+    ports:
+      - "8000:1433"
+    volumes:
+      - type: "volume"
+        target: "/var/opt/mssql"
+        source: "SqlData"
+        read_only: false
+    networks:
+      - "aspire"
+  servicea:
+    image: "${SERVICEA_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8001"
+      ConnectionStrings__serviceADb: "Server=sql,1433;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=true;Initial Catalog=serviceADb"
+    ports:
+      - "8002:8001"
+      - "8004:8003"
+    depends_on:
+      sql:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  serviceb:
+    image: "${SERVICEB_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8005"
+      ConnectionStrings__serviceBDb: "Server=sql,1433;User ID=sa;Password=${SQL_PASSWORD};TrustServerCertificate=true;Initial Catalog=serviceBDb"
+    ports:
+      - "8006:8005"
+      - "8008:8007"
+    depends_on:
+      sql:
+        condition: "service_started"
+    networks:
+      - "aspire"
+  gateway:
+    image: "${GATEWAY_IMAGE}"
+    environment:
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EXCEPTION_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES: "true"
+      OTEL_DOTNET_EXPERIMENTAL_OTLP_RETRY: "in_memory"
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      HTTP_PORTS: "8009"
+      services__servicea__http__0: "http://servicea:8001"
+      services__serviceb__http__0: "http://serviceb:8005"
+    ports:
+      - "8010:8009"
+      - "8012:8011"
+    depends_on:
+      servicea:
+        condition: "service_started"
+      serviceb:
+        condition: "service_started"
+    networks:
+      - "aspire"
+networks:
+  aspire:
+    driver: "bridge"
+volumes:
+  SqlData:
+    driver: "local"
