@@ -1,13 +1,27 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var serviceA = builder.AddProject<Projects.ServiceA>("servicea");
+var sql = builder.AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume(name: "SqlData");
 
-var serviceB = builder.AddProject<Projects.ServiceB>("serviceb");
+
+var serviceASqlDb = sql.AddDatabase("serviceADb");
+var serviceBSqlDb = sql.AddDatabase("serviceBDb");
+
+var serviceA = builder.AddProject<Projects.ServiceA>("servicea")
+    .WithReference(serviceASqlDb)
+    .WaitFor(serviceASqlDb);
+
+var serviceB = builder.AddProject<Projects.ServiceB>("serviceb")
+    .WithReference(serviceBSqlDb)
+    .WaitFor(serviceBSqlDb);
 
 var gateway = builder.AddProject<Projects.Gateway>("gateway")
     .WithExternalHttpEndpoints()
     .WithReference(serviceA)
-    .WithReference(serviceB);
+    .WithReference(serviceB)
+    .WaitFor(serviceA)
+    .WaitFor(serviceB);
 
 
 builder.Build().Run();

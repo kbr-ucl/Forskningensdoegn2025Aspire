@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Microsoft.EntityFrameworkCore.SqlServer" Version="9.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Forskningensdoegn2025Aspire.ServiceDefaults\Forskningensdoegn2025Aspire.ServiceDefaults.csproj" />
   </ItemGroup>
 
