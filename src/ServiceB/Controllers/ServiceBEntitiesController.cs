@@ -4,7 +4,7 @@ using ServiceB.Model;
 
 namespace ServiceB.Controllers;
 
-[Route("api/[controller]")]
+[Route("[controller]")]
 [ApiController]
 public class ServiceBEntitiesController : ControllerBase
 {

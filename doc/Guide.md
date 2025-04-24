@@ -907,6 +907,24 @@ builder.Build().Run();
 **Program.cs**
 
 ```c#
+using ServiceA.Model;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+builder.Services.AddControllers();
+
+// Add services to the container.
+builder.AddSqlServerDbContext<ServiceADbContext>("serviceADb");
+
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+// Configure the HTTP request pipeline.
+
+app.UseHttpsRedirection();
+
 app.MapGet("/hello", () =>
 {
     app.Logger.LogInformation("ServiceA got Hello request");
@@ -915,6 +933,25 @@ app.MapGet("/hello", () =>
 });
 
 app.MapControllers();
+
+// While developing locally, you need to create a database inside the SQL Server container.
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ServiceADbContext>();
+    context.Database.EnsureCreated();
+    // Check if the database is empty and add a sample entity if it is.
+    if (!context.ServiceAEntites.Any())
+    {
+        context.ServiceAEntites.Add(new ServiceAEntity { Name = "Sample", Description = "Sample description" });
+        context.SaveChanges();
+    }
+}
+
+app.Run();
+
+internal record HelloResponse(string Greeting)
+{
+}
 ```
 
 #### API Controllers
@@ -1200,10 +1237,339 @@ For at få autogenereret Views "snyder" vi ved at bruge Entityframework.
 
 ![image-20250424133100165](assets/image-20250424133100165.png)
 
-Nu bruger vi git til at rydde op
+**Snyd koster - der skal ryddes op**
+
+Vi bruger git til at rydde op ved at slette de ting der er oprettet pga. at vi snød ved at anvende entityframework.
+
+
 
 ![image-20250424133150010](assets/image-20250424133150010.png)
 
 ![image-20250424133234312](assets/image-20250424133234312.png)
 
+Dernæst skal vi have rullet de ændringer tilbage der er sket i eksisterende filer.
+
+
+
 ![image-20250424133313364](assets/image-20250424133313364.png)
+
+Og endeligt skal den autogenererede controller kode ændres således at Api proxy klassserne anvendes i stedet for entityframework.
+
+**ServiceAEntityController.cs**
+
+```c#
+using Microsoft.AspNetCore.Mvc;
+using MvcFrontend.ApiService;
+
+namespace MvcFrontend.Controllers;
+
+public class ServiceAEntityController : Controller
+{
+    private readonly ServiceA _api;
+
+    public ServiceAEntityController(ServiceA api)
+    {
+        _api = api;
+    }
+
+    // GET: ServiceAEntity
+    public async Task<IActionResult> Index()
+    {
+        return View(await _api.GetServiceAEntities());
+    }
+
+    // GET: ServiceAEntity/Details/5
+    public async Task<IActionResult> Details(int id)
+    {
+        var serviceAEntityDto = await _api.GetServiceAEntity(id);
+
+        return View(serviceAEntityDto);
+    }
+
+    // GET: ServiceAEntity/Create
+    public IActionResult Create()
+    {
+        return View();
+    }
+
+    // POST: ServiceAEntity/Create
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create([Bind("Id,Name,Description")] ServiceAEntityDto serviceAEntityDto)
+    {
+        if (ModelState.IsValid)
+        {
+            await _api.CreateServiceAEntity(serviceAEntityDto);
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(serviceAEntityDto);
+    }
+
+    // GET: ServiceAEntity/Edit/5
+    public async Task<IActionResult> Edit(int id)
+    {
+        var serviceAEntityDto = await _api.GetServiceAEntity(id);
+
+        return View(serviceAEntityDto);
+    }
+
+    // POST: ServiceAEntity/Edit/5
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description")] ServiceAEntityDto serviceAEntityDto)
+    {
+        if (id != serviceAEntityDto.Id) return NotFound();
+
+        if (ModelState.IsValid)
+        {
+            await _api.UpdateServiceAEntity(id, serviceAEntityDto);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        return View(serviceAEntityDto);
+    }
+
+    // GET: ServiceAEntity/Delete/5
+    public async Task<IActionResult> Delete(int id)
+    {
+        var serviceAEntityDto = await _api.GetServiceAEntity(id);
+
+        return View(serviceAEntityDto);
+    }
+
+    // POST: ServiceAEntity/Delete/5
+    [HttpPost]
+    [ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> DeleteConfirmed(int id)
+    {
+        await _api.DeleteServiceAEntity(id);
+
+        return RedirectToAction(nameof(Index));
+    }
+}
+```
+
+**ServiceBEntityController.cs**
+
+```c#
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceB.Model;
+
+namespace ServiceB.Controllers;
+
+[Route("[controller]")]
+[ApiController]
+public class ServiceBEntitiesController : ControllerBase
+{
+    private readonly ServiceBDbContext _context;
+
+    public ServiceBEntitiesController(ServiceBDbContext context)
+    {
+        _context = context;
+    }
+
+    // GET: ServiceBEntities
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ServiceBEntityDto>>> GetServiceBEntites()
+    {
+        return await _context.ServiceBEntites
+            .Select(a => new ServiceBEntityDto(a.Id, a.Name, a.Description))
+            .ToListAsync();
+    }
+
+    // GET: ServiceBEntities/5
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ServiceBEntityDto>> GetServiceBEntity(int id)
+    {
+        var serviceAEntity = await _context.ServiceBEntites.FindAsync(id);
+
+        if (serviceAEntity == null) return NotFound();
+
+        return new ServiceBEntityDto(serviceAEntity.Id, serviceAEntity.Name, serviceAEntity.Description);
+    }
+
+    // PUT: ServiceBEntities/5
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutServiceBEntity(int id, ServiceBEntityDto dto)
+    {
+        if (id != dto.Id) return BadRequest();
+        var serviceAEntity = ConvertFromDto(dto);
+        _context.Entry(serviceAEntity).State = EntityState.Modified;
+        _context.Entry(serviceAEntity).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ServiceAEntityExists(id)) return NotFound();
+
+            throw;
+        }
+
+        return NoContent();
+    }
+
+    // POST: ServiceBEntities
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPost]
+    public async Task<ActionResult<ServiceBEntityDto>> PostServiceBEntity(ServiceBEntityDto dto)
+    {
+        var serviceAEntity = ConvertFromDto(dto);
+        _context.ServiceBEntites.Add(serviceAEntity);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction("GetServiceBEntity", new { id = serviceAEntity.Id },
+            new ServiceBEntityDto(serviceAEntity.Id, serviceAEntity.Name, serviceAEntity.Description));
+    }
+
+    // DELETE: ServiceBEntities/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteServiceBEntity(int id)
+    {
+        var serviceAEntity = await _context.ServiceBEntites.FindAsync(id);
+        if (serviceAEntity == null) return NotFound();
+
+        _context.ServiceBEntites.Remove(serviceAEntity);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    private bool ServiceAEntityExists(int id)
+    {
+        return _context.ServiceBEntites.Any(e => e.Id == id);
+    }
+
+    private ServiceBEntity ConvertFromDto(ServiceBEntityDto entity)
+    {
+        return new ServiceBEntity
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description
+        };
+    }
+}
+
+// DTO for ServiceBEntity
+public record ServiceBEntityDto(int Id, string Name, string Description);
+```
+
+
+
+Nu mangler vi bare at få de nye features med i menuen
+
+**_Layout.cshtml**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - MvcFrontend</title>
+    <script type="importmap"></script>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/MvcFrontend.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">MvcFrontend</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="ServiceAEntity" asp-action="Index">ServiceAEntity</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="ServiceBEntity" asp-action="Index">ServiceBEntity</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2025 - MvcFrontend - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+
+```
+
+
+
+### Test
+
+Hvis ikke projektet "Forskningensdoegn2025Aspire.AppHost" står til at være startup projekt, skal du vælge "Forskningensdoegn2025Aspire.AppHost" som startup projekt.
+
+Kør løsningen - følgende skærmbillede bør dukke op (port numre kan være anderledes hos dig)
+
+Klik på "mvcfrontend"
+
+![image-20250424181708282](assets/image-20250424181708282.png)
+
+Klik på ServiceAEntity
+
+![image-20250424181822757](assets/image-20250424181822757.png)
+
+
+
+Bemærk at der kommer data :-)
+
+![image-20250424181849058](assets/image-20250424181849058.png)
+
+Prøv at klikke på Traces
+
+![image-20250424181946023](assets/image-20250424181946023.png)
+
+Zoom ind
+
+![image-20250424182028764](assets/image-20250424182028764.png)
+
+Og... Her har du et overblik over hvilke dele af løsningen der er "langsom".
+
+![image-20250424182046183](assets/image-20250424182046183.png)
+
+Prøv nu at klikke på Graph
+
+![image-20250424182158756](assets/image-20250424182158756.png)
+
+Og... Her ser du komponenterne i løsningen og hvorledes de "hænger sammen"
+
+![image-20250424182243253](assets/image-20250424182243253.png)

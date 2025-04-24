@@ -3,6 +3,7 @@ using ServiceA.Model;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddControllers();
 
 // Add services to the container.
 builder.AddSqlServerDbContext<ServiceADbContext>("serviceADb");
