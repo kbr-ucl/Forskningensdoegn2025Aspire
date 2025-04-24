@@ -1186,3 +1186,24 @@ Og... vi vælger at "snyde" for at få autogenereret vores Views.
 
 
 
+For at få autogenereret Views "snyder" vi ved at bruge Entityframework.
+
+![image-20250424132847223](assets/image-20250424132847223.png)
+
+![image-20250424132938849](assets/image-20250424132938849.png)
+
+![image-20250424133011701](assets/image-20250424133011701.png)
+
+
+
+
+
+![image-20250424133100165](assets/image-20250424133100165.png)
+
+Nu bruger vi git til at rydde op
+
+![image-20250424133150010](assets/image-20250424133150010.png)
+
+![image-20250424133234312](assets/image-20250424133234312.png)
+
+![image-20250424133313364](assets/image-20250424133313364.png)
