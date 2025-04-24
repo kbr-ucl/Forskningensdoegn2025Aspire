@@ -1174,3 +1174,15 @@ Bemærk base adreserne - de kobler til Aspire, hvor "gateway" er defineret.
 
 "Bunden" er nu klar, og vi kan lave UI delen. Her snyder vi lidt og bruger DTO klasserne som ViewModels. Der er dårlig praksis! men vi gør det for at spare lidt tid.
 
+Og... vi vælger at "snyde" for at få autogenereret vores Views.
+
+**Inden vi fortsætter er det en rigtig god ide at lave et git commit !!!**
+
+
+
+
+
+![image-20250424075125514](assets/image-20250424075125514.png)
+
+
+
