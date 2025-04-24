@@ -700,6 +700,19 @@ Links:
 
 - https://learn.microsoft.com/en-us/dotnet/aspire/whats-new/dotnet-aspire-9.2#-deployment-improvements
 - https://www.nuget.org/packages/Aspire.Hosting.Docker
+- https://devblogs.microsoft.com/dotnet/dotnet-aspire-92-is-now-available-with-new-ways-to-deploy/
+
+
+
+###  .NET Aspire CLI
+
+*To build the assets for a publisher, you can use the new experimental .NET Aspire CLI, which is currently available as a global tool. Note that the `--prerelease` switch is required during this experimental period:*
+
+```bash
+dotnet tool install -g aspire.cli --prerelease
+```
+
+
 
 ### Forskningensdoegn2025Aspire.AppHost
 
@@ -708,6 +721,21 @@ Links:
 Tilføj disse nuget pakker:  Aspire.Hosting.Docker --version 9.2.0-preview.1.25209.2
 
 ![image-20250423110245986](assets/image-20250423110245986.png)
+
+
+
+**Program.cs**
+
+```c#
+var gateway = builder.AddProject<Projects.Gateway>("gateway")
+    .WithExternalHttpEndpoints()
+    .WithReference(serviceA)
+    .WithReference(serviceB)
+    .WaitFor(serviceA)
+    .WaitFor(serviceB);
+
+builder.AddDockerComposePublisher();
+```
 
 
 
@@ -811,4 +839,338 @@ volumes:
 
 ## Iteration 5
 
-I denne iteration skal vi have tilkoblet en Web frontend.
+I denne iteration skal vi have tilkoblet en Web frontend. Vi vælger at lave det som en MVC løsning.
+
+Samtidigt udvidder vi ServiceA og ServiceB således de udstiller et REST endpoint til hhv. ServiceAEntity og ServiceBEntity. 
+
+Web frontenden skal understøtte CRUD operationer for ServiceAEntity og ServiceBEntity.
+
+### Projekt struktur
+
+**Forskningensdoegn2025Aspire**
+
+Tilføj et nyt ASP.NET Core Web App (Model-View-Controller) projekt til Forskningensdoegn2025Aspire solution
+
+
+
+![image-20250423151607835](assets/image-20250423151607835.png)
+
+Vælg "Enlist in .NET Aspire orchestration"
+
+
+
+### Forskningensdoegn2025Aspire.AppHost
+
+**Tilret Program.cs**
+
+```c#
+var builder = DistributedApplication.CreateBuilder(args);
+
+var sql = builder.AddSqlServer("sql")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume(name: "SqlData");
+
+
+var serviceASqlDb = sql.AddDatabase("serviceADb");
+var serviceBSqlDb = sql.AddDatabase("serviceBDb");
+
+var serviceA = builder.AddProject<Projects.ServiceA>("servicea")
+    .WithReference(serviceASqlDb)
+    .WaitFor(serviceASqlDb);
+
+var serviceB = builder.AddProject<Projects.ServiceB>("serviceb")
+    .WithReference(serviceBSqlDb)
+    .WaitFor(serviceBSqlDb);
+
+var gateway = builder.AddProject<Projects.Gateway>("gateway")
+    .WithExternalHttpEndpoints()
+    .WithReference(serviceA)
+    .WithReference(serviceB)
+    .WaitFor(serviceA)
+    .WaitFor(serviceB);
+
+builder.AddDockerComposePublisher();
+
+builder.AddProject<Projects.MvcFrontend>("mvcfrontend")
+    .WithReference(gateway)
+    .WaitFor(gateway);
+
+builder.Build().Run();
+```
+
+
+
+### ServiceA
+
+
+
+**Program.cs**
+
+```c#
+app.MapGet("/hello", () =>
+{
+    app.Logger.LogInformation("ServiceA got Hello request");
+    var greeting = new HelloResponse("Hello from ServiceA");
+    return greeting;
+});
+
+app.MapControllers();
+```
+
+#### API Controllers
+
+Opret folderen Controllers
+Opret ServiceAEntityController - Højreklik på Controllers mappen -> Add -> Controller
+
+
+
+![image-20250424070953795](assets/image-20250424070953795.png)
+
+
+
+![image-20250424071213454](assets/image-20250424071213454.png)
+
+
+
+![image-20250424071926535](assets/image-20250424071926535.png)
+
+
+
+Herefter autogenereres en controller.
+
+Denne tilpasses ifht. URL. Og envidere anvendes en DTO i stedet for entity objekter ind og ud af controlleren.
+
+Den færdige controller ser således ud
+
+**ServiceAEntitiesController.cs**
+
+```c#
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ServiceA.Model;
+
+namespace ServiceA.Controllers;
+
+[Route("[controller]")] //Tilrettet
+[ApiController]
+public class ServiceAEntitiesController : ControllerBase
+{
+    private readonly ServiceADbContext _context;
+
+    public ServiceAEntitiesController(ServiceADbContext context)
+    {
+        _context = context;
+    }
+
+    // GET: ServiceAEntities
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ServiceAEntityDto>>> GetServiceAEntites()
+    {
+        return await _context.ServiceAEntites
+            .Select(a => new ServiceAEntityDto(a.Id, a.Name, a.Description))
+            .ToListAsync();
+    }
+
+    // GET: ServiceAEntities/5
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ServiceAEntityDto>> GetServiceAEntity(int id)
+    {
+        var serviceAEntity = await _context.ServiceAEntites.FindAsync(id);
+
+        if (serviceAEntity == null) return NotFound();
+
+        return new ServiceAEntityDto(serviceAEntity.Id, serviceAEntity.Name, serviceAEntity.Description);
+    }
+
+    // PUT: ServiceAEntities/5
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutServiceAEntity(int id, ServiceAEntityDto dto)
+    {
+        if (id != dto.Id) return BadRequest();
+        var serviceAEntity = ConvertFromDto(dto);
+        _context.Entry(serviceAEntity).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!ServiceAEntityExists(id)) return NotFound();
+
+            throw;
+        }
+
+        return NoContent();
+    }
+
+    // POST: ServiceAEntities
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPost]
+    public async Task<ActionResult<ServiceAEntityDto>> PostServiceAEntity(ServiceAEntityDto dto)
+    {
+        var serviceAEntity = ConvertFromDto(dto);
+        _context.ServiceAEntites.Add(serviceAEntity);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction("GetServiceAEntity", new { id = serviceAEntity.Id },
+            new ServiceAEntityDto(serviceAEntity.Id, serviceAEntity.Name, serviceAEntity.Description));
+    }
+
+    // DELETE: ServiceAEntities/5
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteServiceAEntity(int id)
+    {
+        var serviceAEntity = await _context.ServiceAEntites.FindAsync(id);
+        if (serviceAEntity == null) return NotFound();
+
+        _context.ServiceAEntites.Remove(serviceAEntity);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    private bool ServiceAEntityExists(int id)
+    {
+        return _context.ServiceAEntites.Any(e => e.Id == id);
+    }
+
+    private ServiceAEntity ConvertFromDto(ServiceAEntityDto entity)
+    {
+        return new ServiceAEntity
+        {
+            Id = entity.Id,
+            Name = entity.Name,
+            Description = entity.Description
+        };
+    }
+}
+
+// DTO for ServiceAEntity
+public record ServiceAEntityDto(int Id, string Name, string Description);
+```
+
+
+
+#### ServiceB
+
+Lav det tilsvarende arbejde for ServiceB
+
+
+
+### MvcFrontend
+
+#### Typed http client
+
+Efter min mening er Typed Client den bedste måde at lave en api proxy klasse. Den læner sig op ad "remote proxy" design mønstret. Det er vigtigt at anvende "AddHttpClient" idet man herved bruger HttpClientFactory, som sikre mod socket exhaustion
+
+Links:
+
+- https://learn.microsoft.com/en-us/aspnet/core/fundamentals/http-requests?view=aspnetcore-9.0#typed-clients
+- https://learn.microsoft.com/en-us/dotnet/fundamentals/networking/http/httpclient-guidelines
+
+**Service proxy klasser**
+
+Opret folderen ApiService
+
+Opret klasserne ServiceA og ServiceB
+
+![image-20250423152849172](assets/image-20250423152849172.png)
+
+I begge klasser oprettes en constructor der tager argumentet: HttpClient httpClient
+
+**ServiceA**
+
+```c#
+namespace MvcFrontend.ApiService;
+
+public class ServiceA
+{
+    private readonly HttpClient _api;
+
+    public ServiceA(HttpClient httpClient)
+    {
+        _api = httpClient;
+    }
+
+    public async Task<IEnumerable<ServiceAEntityDto>> GetServiceAEntities()
+    {
+        var response = await _api.GetAsync("ServiceAEntities");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<IEnumerable<ServiceAEntityDto>>();
+        return result ?? [];
+    }
+
+    public async Task<ServiceAEntityDto> GetServiceAEntity(int id)
+    {
+        var response = await _api.GetAsync($"ServiceAEntities/{id}");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAEntityDto>();
+        return result ?? throw new Exception("Entity not found");
+    }
+
+    public async Task<ServiceAEntityDto> CreateServiceAEntity(ServiceAEntityDto dto)
+    {
+        var response = await _api.PostAsJsonAsync("ServiceAEntities", dto);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAEntityDto>();
+        return result ?? throw new Exception("Failed to create entity");
+    }
+
+    public async Task UpdateServiceAEntity(int id, ServiceAEntityDto dto)
+    {
+        var response = await _api.PutAsJsonAsync($"ServiceAEntities/{id}", dto);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task DeleteServiceAEntity(int id)
+    {
+        var response = await _api.DeleteAsync($"ServiceAEntities/{id}");
+        response.EnsureSuccessStatusCode();
+    }
+}
+
+// DTO for ServiceAEntity
+public record ServiceAEntityDto(int Id, string Name, string Description);
+```
+
+
+
+**ServiceB**
+
+På tilsvarende vis oprettes ServiceB
+
+
+
+**Program.cs**
+
+Opret service proxy'erne i IoC ved brug af HttpClientFactory
+
+```c#
+using MvcFrontend.ApiService;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+// Add services to the container.
+builder.Services.AddControllersWithViews();
+
+builder.Services.AddHttpClient<ServiceA>
+(httpClient => httpClient.BaseAddress = new Uri("https+http://gateway/servicea/"));
+
+builder.Services.AddHttpClient<ServiceB>
+(httpClient => httpClient.BaseAddress = new Uri("https+http://gateway/serviceb/"));
+```
+
+
+
+Bemærk base adreserne - de kobler til Aspire, hvor "gateway" er defineret.
+
+
+
+#### MVC Controllers
+
+"Bunden" er nu klar, og vi kan lave UI delen. Her snyder vi lidt og bruger DTO klasserne som ViewModels. Der er dårlig praksis! men vi gør det for at spare lidt tid.
+

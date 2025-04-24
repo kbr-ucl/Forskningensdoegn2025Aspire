@@ -22,6 +22,8 @@ app.MapGet("/hello", () =>
     return greeting;
 });
 
+app.MapControllers();
+
 // While developing locally, you need to create a database inside the SQL Server container.
 using (var scope = app.Services.CreateScope())
 {

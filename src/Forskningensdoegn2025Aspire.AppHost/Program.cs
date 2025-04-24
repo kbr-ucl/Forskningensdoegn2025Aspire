@@ -25,4 +25,9 @@ var gateway = builder.AddProject<Projects.Gateway>("gateway")
 
 builder.AddDockerComposePublisher();
 
+builder.AddProject<Projects.MvcFrontend>("mvcfrontend")
+    .WithReference(gateway)
+    .WaitFor(gateway);
+
+
 builder.Build().Run();

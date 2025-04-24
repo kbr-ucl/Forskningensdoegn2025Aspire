@@ -32,6 +32,20 @@ https://learn.microsoft.com/en-us/dotnet/aspire/database/sql-server-integrations
 
 
 
+### Aspire.Hosting.SqlServer library
+
+https://www.nuget.org/packages/Aspire.Hosting.SqlServer
+
+
+
+
+### .NET Aspire SQL Server Entity Framework Core integration
+
+https://learn.microsoft.com/da-dk/dotnet/aspire/database/sql-server-entity-framework-integration?tabs=dotnet-cli%2Cssms
+
+
+
+
 ### Using YARP as BFF within .NET Aspire: Integrating YARP into .NET Aspire
 
 https://timdeschryver.dev/blog/integrating-yarp-within-dotnet-aspire
@@ -48,3 +62,8 @@ https://devblogs.microsoft.com/dotnet/dotnet-aspire-92-is-now-available-with-new
 
 https://learn.microsoft.com/en-us/dotnet/aspire/whats-new/dotnet-aspire-9.2
 
+
+
+### .NET Aspire 9.2 is Now Available with New Ways to Deploy
+
+https://devblogs.microsoft.com/dotnet/dotnet-aspire-92-is-now-available-with-new-ways-to-deploy/
