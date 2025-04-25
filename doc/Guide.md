@@ -20,6 +20,10 @@ Backenden består:
 
     
 
+![image-20250425070315038](assets/image-20250425070315038.png)
+
+
+
 ## Projekt struktur
 
 Hele løsningen samles i én solution.

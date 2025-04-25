@@ -4,3 +4,5 @@
 
 [Krav til installerede tools](doc/Tools-and-versions.md)
 
+[Tutorial](doc/Guide.md)
+
