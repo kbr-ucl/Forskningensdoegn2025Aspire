@@ -40,7 +40,7 @@ Hele løsningen samles i én solution.
 
 
 
-## Iteration 1
+## Iteration 1 - Hello World
 
 Først vil vi lave en "hello world", hvor vi opretter ServiceA og ServiceB med et hello endpoint, der svare med hhv. "Hello from ServiceA" og "Hello from ServiceB". Herefter opretter vi en YARP ApiGateway foran de to services og ruter alle /ServiceA kald til ServiceA og alle /ServiceB kald til ServiceB. Alle komponenter orkestreres via Aspire. Endelig opretter vi en test, så vi kan tjekke at alt virker. Både ServiceA og ServiceB oprettes som "Minimal API" projekter. Men vi opsætter IKKE Aspire i denne iteration
 
@@ -270,7 +270,7 @@ Iteration 1 er afsluttet da vi har en succesfuld test (hvilket var vores DoD kri
 
 
 
-## Iteration 2
+## Iteration 2 - Aspire orkestrering
 
 I denne iteration er der fokus på Aspire orkestrering.
 
@@ -374,7 +374,7 @@ Iteration 2 er afsluttet da vi har en succesfuld test - vores abstrakte servicen
 
 
 
-## Iteration 3
+## Iteration 3 - SQL databaser
 
 I denne iteration skal vi have tilkoblet SQL databaser til hhv. ServiceA og ServiceB. Men dette skal ske via Aspire og SQL servere der hostes i Docker.
 
@@ -696,7 +696,7 @@ Nedenstående er vis de ændringer der - på fil niveau - er er foretaget i denn
 
 Iteration 3 er afsluttet da vi har en succesfuld test - Der er data i databasen som er indsat via Entity Framework.
 
-## Iteration 4
+## Iteration 4 - Docker compose
 
 I denne iteration skal vi prøve at generer en docker compose fil fra Aspire, idet vi ofte er interesseret i at haven en Docker compose fil.
 
@@ -745,6 +745,10 @@ builder.AddDockerComposePublisher();
 
 **Dan docker-compose filen**
 Åben et terminal vindue ved at højreklikke på "Forskningensdoegn2025Aspire.AppHost" og vælge "Open in Terminal"
+
+**OBS !!! - Docker Deskktop skal være kørende**
+
+ 
 
 ![image-20250423110534235](assets/image-20250423110534235.png)
 
@@ -841,7 +845,7 @@ volumes:
 
 
 
-## Iteration 5
+## Iteration 5 - Web frontend
 
 I denne iteration skal vi have tilkoblet en Web frontend. Vi vælger at lave det som en MVC løsning.
 
