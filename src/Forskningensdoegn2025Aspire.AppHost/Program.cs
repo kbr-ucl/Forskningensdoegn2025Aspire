@@ -23,7 +23,8 @@ var gateway = builder.AddProject<Projects.Gateway>("gateway")
     .WaitFor(serviceA)
     .WaitFor(serviceB);
 
-builder.AddDockerComposePublisher();
+// builder.AddDockerComposePublisher();
+// builder.AddDockerComposeEnvironment("docker-compose");
 
 builder.AddProject<Projects.MvcFrontend>("mvcfrontend")
     .WithReference(gateway)
